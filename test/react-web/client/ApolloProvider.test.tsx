@@ -21,22 +21,17 @@ describe('<ApolloProvider /> Component', () => {
   const store = createStore(() => ({}));
 
   interface ChildContext {
-    store: Object;
     client: Object;
   }
 
   class Child extends React.Component<any, { store: any, client: any}> {
     static contextTypes: React.ValidationMap<any> = {
-      client: PropTypes.object.isRequired,
-      store: PropTypes.object.isRequired,
+      client: PropTypes.object.isRequired
     };
 
     context: ChildContext;
 
     render() {
-      if (!this.context.store) {
-        throw new Error('Store is required');
-      }
       return <div />;
     }
 
@@ -44,10 +39,9 @@ describe('<ApolloProvider /> Component', () => {
       if (this.props.data) this.props.data.refetch()
     }
   }
-  class ChildWithOptionalStore extends React.Component<any, { store: any, client: any}> {
+  class ChildWithOptionalStore extends React.Component<any, {client: any}> {
     static contextTypes: React.ValidationMap<any> = {
-      client: PropTypes.object.isRequired,
-      store: PropTypes.object,
+      client: PropTypes.object.isRequired
     };
 
     context: ChildContext;
@@ -70,16 +64,14 @@ describe('<ApolloProvider /> Component', () => {
 
     componentDidMount() {
       this.setState({
-        store: this.props.store,
         client: this.props.client,
       });
     }
 
     render() {
       return (
-        <ApolloProvider client={this.state.client || this.props.client}
-          store={this.state.store || this.props.store}>
-          {this.props.store ? <Child /> : <ChildWithOptionalStore />}
+        <ApolloProvider client={this.state.client || this.props.client}>
+          <Child />
         </ApolloProvider>
       );
     }
@@ -93,14 +85,13 @@ describe('<ApolloProvider /> Component', () => {
 
     componentDidMount() {
       this.setState({
-        store: this.props.store,
         client: this.props.client,
       });
     }
 
     render() {
       return (
-        <ApolloProvider client={this.state.client || this.props.client} store={store}>
+        <ApolloProvider client={this.state.client || this.props.client}>
           <GQLChild/>
         </ApolloProvider>
       );
@@ -109,7 +100,7 @@ describe('<ApolloProvider /> Component', () => {
 
   it('should render children components', () => {
     const wrapper = shallow(
-      <ApolloProvider store={store} client={client}>
+      <ApolloProvider client={client}>
         <div className='unique'/>
       </ApolloProvider>
     );
@@ -148,7 +139,7 @@ describe('<ApolloProvider /> Component', () => {
     console.error = () => { /* noop */ };
     expect(() => {
       shallow(
-        <ApolloProvider store={store} client={client}/>
+        <ApolloProvider client={client}/>
       );
     }).toThrowError(Error);
     console.error = originalConsoleError;
@@ -156,7 +147,7 @@ describe('<ApolloProvider /> Component', () => {
 
   it('should add the client to the child context', () => {
     const tree = TestUtils.renderIntoDocument(
-      <ApolloProvider store={store} client={client}>
+      <ApolloProvider client={client}>
         <Child />
       </ApolloProvider>
     ) as React.Component<any, any>;
@@ -164,42 +155,6 @@ describe('<ApolloProvider /> Component', () => {
     const child = TestUtils.findRenderedComponentWithType(tree, Child);
     expect(child.context.client).toEqual(client);
 
-  });
-
-  it('should add the given store to the child context', () => {
-    const tree = TestUtils.renderIntoDocument(
-      <ApolloProvider store={store} client={client}>
-        <Child />
-      </ApolloProvider>
-    ) as React.Component<any, any>;
-
-    const child = TestUtils.findRenderedComponentWithType(tree, Child);
-    expect(child.context.store).toEqual(store);
-
-  });
-
-  it('should pass the parent store to the child context if not provided', () => {
-    const tree = TestUtils.renderIntoDocument(
-      <Provider store={store}>
-        <ApolloProvider client={client}>
-          <Child />
-        </ApolloProvider>
-      </Provider>
-    ) as React.Component<any, any>;
-
-    const child = TestUtils.findRenderedComponentWithType(tree, Child);
-    expect(child.context.store).toEqual(store);
-  });
-
-  it('should pass the parent store to the child context if not provided even if undefined', () => {
-    const tree = TestUtils.renderIntoDocument(
-      <ApolloProvider client={client}>
-        <ChildWithOptionalStore />
-      </ApolloProvider>
-    ) as React.Component<any, any>;
-
-    const child = TestUtils.findRenderedComponentWithType(tree, ChildWithOptionalStore);
-    expect(child.context.store).toEqual(undefined);
   });
 
   it('should update props when the client changes', () => {
@@ -213,8 +168,7 @@ describe('<ApolloProvider /> Component', () => {
   });
 
   it('should update props when the store changes', () => {
-    const container = shallow(<Container client={client} store={store} />);
-    expect(container.find(ApolloProvider).props().store).toEqual(store);
+    const container = shallow(<Container client={client} />);
 
     const newStore = createStore(() => ({}));
     container.setState({ store: newStore });
@@ -250,7 +204,7 @@ describe('<ApolloProvider /> Component', () => {
     testClient.initStore = initStoreMock;
 
     const container = TestUtils.renderIntoDocument(
-      <Container client={testClient} store={store} />
+      <Container client={testClient} />
     ) as React.Component<any, any>;
 
     expect(initStoreMock).not.toHaveBeenCalled();
@@ -268,25 +222,21 @@ describe('<ApolloProvider /> Component', () => {
 
   it('child component should be able to query new client and store when props change', () => {
     const container = TestUtils.renderIntoDocument(
-      <Container client={client} store={store} />
+      <Container client={client} />
     ) as React.Component<any, any>;
 
     const child = TestUtils.findRenderedComponentWithType(container, Child);
     expect(child.context.client).toEqual(client);
-    expect(child.context.store).toEqual(store);
 
     const newClient = new ApolloClient({});
     const newStore = createStore(() => ({}));
 
     container.setState({
       client: newClient,
-      store: newStore,
     });
 
     expect(child.context.client).toEqual(newClient);
-    expect(child.context.store).toEqual(newStore);
     expect(child.context.client).not.toEqual(client);
-    expect(child.context.store).not.toEqual(store);
   });
 
   /* it('should refetch against the new client when the client prop changes', () => {
